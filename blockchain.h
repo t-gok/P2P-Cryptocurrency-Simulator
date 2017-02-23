@@ -2,6 +2,7 @@
 #define BLOCKCHAIN_H
 
 #include <map>
+#include <time.h>
 #include "blocknode.h"
 #include "transaction.h"
 
@@ -12,7 +13,7 @@ public:
 	BlockChain() {
 		vector<Transaction> txns;
 		Block genesisBlock(0, txns);
-		_top = new BlockNode(genesisBlock, NULL);
+		_top = new BlockNode(genesisBlock, NULL, 0);
 	}
 
 	unsigned long height() const { return _top->height(); }
@@ -22,7 +23,7 @@ public:
 	// adds a block to the blockchain
 	// returns true if succesful
 	// returns false if parent block not in blockchain
-	bool add_block(Block &block) {
+	bool add_block(Block &block, time_t arrivalTime) {
 		if (_blockMap.find(block.parentId()) == _blockMap.end()) {
 			return false;
 		}
@@ -30,7 +31,7 @@ public:
 		Id blockId = block.id();
 		Id parentId = block.parentId();
 		BlockNode *parentNode = _blockMap[parentId];
-		BlockNode *bnode = new BlockNode(block, parentNode);
+		BlockNode *bnode = new BlockNode(block, parentNode, arrivalTime);
 		_blockMap[blockId] = bnode;
 
 		// update top if this becomes the longest chain, use time to break ties

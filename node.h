@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <unordered_set>
+#include <random>
 #include "types.h"
 #include "blockchain.h"
 
@@ -17,8 +18,14 @@ const NodeType FAST = 1;
 
 class Node {
 public:
-    Node(Id id, NodeType nodeType) : _id(id), _nodeType(nodeType) {
-        _money = 0;
+    Node(Id id, NodeType nodeType, double txnCreationMean, double blockCreationMean) :
+        _txnCreationDistribution(txnCreationMean), _blockCreationDistribution(blockCreationMean), _generator(time(NULL))
+    {
+        _id = id;
+        _nodeType = nodeType;
+        _money = 100;
+        _txnCreationTime = ceil(_txnCreationDistribution(_generator));
+        _blockCreationTime = ceil(_blockCreationDistribution(_generator));
     }
 
     Id id() const { return _id; }
@@ -48,10 +55,11 @@ public:
         _heardTxns.insert(txn->id());
     }
 
-    void receive_block(Block *block) {
-        _blockChain.add_block(*block);
+    void receive_block(Block *block, time_t arrivalTime) {
+        _blockChain.add_block(*block, arrivalTime);
         _heardBlocks.insert(block->id());
         // update block creation time
+        _blockCreationTime = arrivalTime + ceil(_blockCreationDistribution(_generator));
         // remove transactions in the received block from unspent transactions list
     }
 
@@ -60,6 +68,7 @@ public:
         Coin amount = floor(_money * percentage);
         Transaction *txn = new Transaction(_id, payee, amount);
         receive_transaction(txn);
+        _txnCreationTime += ceil(_txnCreationDistribution(_generator));
         return txn;
     }
 
@@ -68,7 +77,7 @@ public:
         Id parentId = topNode->block().parentId();  // get parent id directly from blockNode?
         Block *block = new Block(parentId, _unspentTxns);
         _unspentTxns.clear();
-        receive_block(block);
+        receive_block(block, _blockCreationTime);
         return block;
     }
 
@@ -84,6 +93,9 @@ private:
     unordered_set<Id> _heardBlocks; // blocks received so far (all blocks in blockchain)
     time_t _txnCreationTime; // time when a new transaction should be created
     time_t _blockCreationTime; // time when a new block should be created
+    std::default_random_engine _generator;
+    std::exponential_distribution<double> _txnCreationDistribution;
+    std::exponential_distribution<double> _blockCreationDistribution;
 };
 
 #endif // NODE_H

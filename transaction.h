@@ -3,16 +3,18 @@
 
 #include "types.h"
 
+int txnIdCounter = 0;
+
 class Transaction {
 public:
     Transaction(Id payer, Id payee, Coin amount) {
-        // generate random transaction id
+        _id = txnIdCounter++;
         _payer = payer;
         _payee = payee;
         _amount = amount;
     }
 
-    Id id() const { return _txnId; }
+    Id id() const { return _id; }
 
     Id payer() const { return _payer; }
 
@@ -20,7 +22,7 @@ public:
 
     Coin amount() const { return _amount; }
 private:
-    Id _txnId;
+    Id _id;
     Id _payer;
     Id _payee;
     Coin _amount;

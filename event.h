@@ -52,7 +52,7 @@ private:
 class EventComparison {
 public:
 	bool operator() (const Event *lhs, const Event *rhs) const {
-		return lhs->occurenceTime() < rhs->occurenceTime();
+		return lhs->occurenceTime() > rhs->occurenceTime();
 	}
 };
 

@@ -7,10 +7,12 @@
 
 using namespace std;
 
+int blockIdCounter = 0;
+
 class Block {
 public:
     Block(Id parentId, const vector<Transaction> &transactions) : _transactions(transactions) {
-        // generate random id
+        _id = blockIdCounter++;
         _parentId = parentId;
     }
 

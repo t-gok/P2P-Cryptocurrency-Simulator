@@ -6,7 +6,9 @@
 
 class BlockNode {
 public:
-	BlockNode(Block block, BlockNode *parentNode) : _block(block), _parentNode(parentNode) {
+	BlockNode(Block block, BlockNode *parentNode, time_t arrivalTime) : 
+		_block(block), _parentNode(parentNode), _arrivalTime(arrivalTime)
+	{
 		_height = parentNode ? _parentNode->height() + 1 : 1;
 	}
 
