@@ -7,12 +7,12 @@
 
 using namespace std;
 
-int blockIdCounter = 0;
+int blockIdCounter = 1;
 
 class Block {
 public:
     Block(Id parentId, const vector<Transaction> &transactions) : _transactions(transactions) {
-        _id = blockIdCounter++;
+        _id = parentId ? ++blockIdCounter : 1;
         _parentId = parentId;
     }
 
@@ -28,6 +28,11 @@ public:
         }
         return false;
     }
+
+    vector<Transaction>& transactions() {
+    	return _transactions;
+    }
+
 private:
     Id _id;
     Id _parentId;

@@ -10,6 +10,7 @@
 #include <random>
 #include "node.h"
 #include "event.h"
+#include "visualize.h"
 
 using namespace std;
 
@@ -29,7 +30,7 @@ public:
             type = (id < t) ? SLOW : FAST;
             // use different values of below two parameters for different nodes
             txnCreationRate = 0.01 + (rand() % 1000) / 100000.0;
-            blockCreationRate = 0.001 + (rand() % 1000) / 1e7;
+            blockCreationRate = 0.01 + (rand() % 1000) / 1e5;
             _nodes.push_back(new Node(id,type,txnCreationRate,blockCreationRate));
         }
 
@@ -53,33 +54,45 @@ public:
         initialize_parameters();
     }
 
-    void simulate() {
+    void simulate(int maxEvents=100) {
         initialize_events();
+        cout << "max events = " << maxEvents << endl;
         int eventCounter = 0;
-        int maxEvents = 20;
+        int ctc = 0; // number of create transaction events
+        int cbc = 0; // number of create block events
+        int rtc = 0; // number of receive transaction events
+        int rbc = 0; // number of receive block events
         while (!_eventsQueue.empty() && eventCounter < maxEvents) {
             Event *event = _eventsQueue.top();
             _eventsQueue.pop();
             eventCounter++;
-            cout << "------------------ Event " << eventCounter << " at " << event->occurenceTime() << " ----------------------" << endl;
+            // cout << "------------------ Event " << eventCounter << " at " << event->occurenceTime() << " ----------------------" << endl;
             switch(event->type()) {
                 case CREATE_TRANSACTION:
                     create_transaction(event);
+                    ctc++;
                     break;
                 case CREATE_BLOCK:
                     create_block(event);
+                    cbc++;
                     break;
                 case RECEIVE_TRANSACTION:
                     receive_transaction(event);
+                    rtc++;
                     break;
                 case RECEIVE_BLOCK:
                     receive_block(event);
+                    rbc++;
                     break;
                 default:
                     assert(false); // should not come here
             }
-            cout << endl;
+            // cout << endl;
         }
+        cout << "ctc = " << ctc << endl;
+        cout << "cbc = " << cbc << endl;
+        cout << "rtc = " << rtc << endl;
+        cout << "rbc = " << rbc << endl;
     }
 
     void print() {
@@ -94,6 +107,12 @@ public:
             cout << endl;
         }
         cout << endl;
+    }
+
+    void visualize_blockchains() {
+        for (Node *node : _nodes) {
+            visualize_blockchain(node);
+        }
     }
 
 private:
@@ -151,7 +170,7 @@ private:
         // add a new event which creates a new transaction by this node at updated txn creation time
         _eventsQueue.push(new Event(creator->txnCreationTime(), CREATE_TRANSACTION, NULL, NULL, -1, -1, creatorId));
 
-        cout << "Create Transaction " << txn->id() << ": " << txn->payer() << "->" << txn->payee() << ", " << txn->amount() << endl;
+        // cout << "Create Transaction " << txn->id() << ": " << txn->payer() << "->" << txn->payee() << ", " << txn->amount() << endl;
     }
 
     void create_block(Event *event) {
@@ -159,16 +178,21 @@ private:
         Node *creator = _nodes[creatorId];
         if (creator->blockCreationTime() == event->occurenceTime()) {
             Block *block = creator->create_new_block();
-            int size_m = 100;
-            for (Id nbr : creator->nbrs()) {
-                Time otime = event->occurenceTime() + get_latency(creatorId, nbr, size_m);
-                _eventsQueue.push(new Event(otime, RECEIVE_BLOCK, NULL, block, creatorId, nbr, -1));
+            if (block == NULL) {
+                cout << "No unspent transactions, block could not be created" << endl;
+                return;
+            } else {
+                int size_m = 100;
+                for (Id nbr : creator->nbrs()) {
+                    Time otime = event->occurenceTime() + get_latency(creatorId, nbr, size_m);
+                    _eventsQueue.push(new Event(otime, RECEIVE_BLOCK, NULL, block, creatorId, nbr, -1));
+                }
+                cout << "Create Block " << block->id() << ": " << creatorId << endl;
             }
 
             // add a new event for creation of new block by this node at update block creation time
             _eventsQueue.push(new Event(creator->blockCreationTime(), CREATE_BLOCK, NULL, NULL, -1, -1, creatorId));
 
-            cout << "Create Block " << block->id() << ": " << creatorId << endl;
         }
     }
 
@@ -178,7 +202,7 @@ private:
         Transaction *txn = event->txn();
         Node *receiver = _nodes[receiverId];
         
-        cout << "Receive Transaction " << txn->id() << ": " << receiverId << "<-" << senderId << endl;
+        // cout << "Receive Transaction " << txn->id() << ": " << receiverId << "<-" << senderId << " ";
         
         // if the transaction is not already heard from any other connected peer
         if (!receiver->has_heard_txn(txn->id())) {
@@ -192,9 +216,9 @@ private:
                 Time otime = event->occurenceTime() + get_latency(receiverId, nbr, size_m);
                 _eventsQueue.push(new Event(otime, RECEIVE_TRANSACTION, txn, NULL, receiverId, nbr, -1));
             }
-            cout << "Successful" << endl;
+            // cout << "Successful" << endl;
         } else {
-            cout << "Rejected" << endl;
+            // cout << "Rejected" << endl;
         }
     }
 
@@ -204,7 +228,7 @@ private:
         Block *block = event->block();
         Node *receiver = _nodes[receiverId];
         
-        cout << "Receive Block " << block->id() << ": " << receiverId << "<-" << senderId << endl;
+        cout << "Receive Block " << block->id() << ": " << receiverId << "<-" << senderId << " ";
         
         // if the block is not already heard from any other connected peer
         if (!receiver->has_heard_block(block->id())) {

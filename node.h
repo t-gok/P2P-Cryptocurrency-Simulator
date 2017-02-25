@@ -34,6 +34,8 @@ public:
 
     vector<Id>& nbrs() { return _nbrs; }
 
+    BlockChain& blockChain() { return _blockChain; }
+
     Time txnCreationTime() const { return _txnCreationTime; }
 
     Time blockCreationTime() const { return _blockCreationTime; } 
@@ -56,11 +58,24 @@ public:
     }
 
     void receive_block(Block *block, Time arrivalTime) {
-        _blockChain.add_block(*block, arrivalTime);
+        if (!_blockChain.add_block(*block, arrivalTime)) {
+            cout << "blockchain can not receive block " << block->id() << endl;
+        }
         _heardBlocks.insert(block->id());
-        // update block creation time
-        _blockCreationTime = arrivalTime + _blockCreationDistribution(_generator);
+        _blockCreationTime = arrivalTime + _blockCreationDistribution(_generator); // update block creation time
+        
         // remove transactions in the received block from unspent transactions list
+        vector<Transaction> blockTxns = block->transactions();
+        for (Transaction txn : blockTxns) {
+            remove_txn(txn.id());   // remove txn from unspent txn list
+            Coin amount = txn.amount(); // txn amount
+            // update money of this node if it is involved in any txn
+            if (_id == txn.payee()) {
+                _money += amount;
+            } else if (_id == txn.payer()) {
+                _money -= amount;
+            } 
+        }
     }
 
     Transaction* create_new_transaction(Id payee) {
@@ -73,8 +88,14 @@ public:
     }
 
     Block* create_new_block() {
+        // if there are no unspent transactions then do not create a block
+        if (_unspentTxns.size() == 0) {
+            _blockCreationTime += _blockCreationDistribution(_generator); // update block creation time
+            cout << "new block creation time = " << _blockCreationTime << endl;
+            return NULL;
+        }
         BlockNode *topNode = _blockChain.top();
-        Id parentId = topNode->block().parentId();  // get parent id directly from blockNode?
+        Id parentId = topNode->block().id();
         Block *block = new Block(parentId, _unspentTxns);
         _unspentTxns.clear();
         receive_block(block, _blockCreationTime);
@@ -94,8 +115,18 @@ private:
     Time _txnCreationTime; // time when a new transaction should be created
     Time _blockCreationTime; // time when a new block should be created
     std::default_random_engine _generator;
-    std::exponential_distribution<double> _txnCreationDistribution;
-    std::exponential_distribution<double> _blockCreationDistribution;
+    std::exponential_distribution<double> _txnCreationDistribution; // distribution for txn interarrival
+    std::exponential_distribution<double> _blockCreationDistribution; // distribution for waiting time for block creation
+
+    void remove_txn(Id txnId) {
+        for (int i = 0; i < _unspentTxns.size(); i++) {
+            if (_unspentTxns[i].id() == txnId) {
+                _unspentTxns[i] = _unspentTxns.back();
+                _unspentTxns.pop_back();
+                break;
+            }
+        }
+    }
 };
 
 #endif // NODE_H
