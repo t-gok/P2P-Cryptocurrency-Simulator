@@ -1,7 +1,6 @@
 #ifndef EVENT_H
 #define EVENT_H
 
-#include <time.h>
 #include "transaction.h"
 #include "block.h"
 #include "types.h"
@@ -13,7 +12,7 @@ const int RECEIVE_BLOCK = 3;
 
 class Event {
 public:
-	Event(time_t occurenceTime, EventType eventType, Transaction *txn, Block *block,
+	Event(Time occurenceTime, EventType eventType, Transaction *txn, Block *block,
 			Id senderId, Id receiverId, Id creatorId) 
 	{
 		_occurenceTime = occurenceTime;
@@ -25,7 +24,7 @@ public:
 		_creatorId = creatorId;
 	}
 
-	time_t occurenceTime() const { return _occurenceTime; }
+	Time occurenceTime() const { return _occurenceTime; }
 
 	EventType type() const { return _eventType; }
 
@@ -40,7 +39,7 @@ public:
 	Id creatorId() const { return _creatorId; }
 	
 private:
-	time_t _occurenceTime; // global time at which event occurs
+	Time _occurenceTime; // global time at which event occurs
 	EventType _eventType; // type of the event
 	Transaction *_txn; // not NULL for RECEIVE_TRANSACTION event
 	Block *_block; // not NULL for RECEIVE_BLOCK event

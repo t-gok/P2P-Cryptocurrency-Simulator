@@ -2,7 +2,6 @@
 #define BLOCKCHAIN_H
 
 #include <map>
-#include <time.h>
 #include "blocknode.h"
 #include "transaction.h"
 
@@ -23,7 +22,7 @@ public:
 	// adds a block to the blockchain
 	// returns true if succesful
 	// returns false if parent block not in blockchain
-	bool add_block(Block &block, time_t arrivalTime) {
+	bool add_block(Block &block, Time arrivalTime) {
 		if (_blockMap.find(block.parentId()) == _blockMap.end()) {
 			return false;
 		}

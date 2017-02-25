@@ -18,14 +18,14 @@ const NodeType FAST = 1;
 
 class Node {
 public:
-    Node(Id id, NodeType nodeType, double txnCreationMean, double blockCreationMean) :
-        _txnCreationDistribution(txnCreationMean), _blockCreationDistribution(blockCreationMean), _generator(time(NULL))
+    Node(Id id, NodeType nodeType, double txnCreationRate, double blockCreationRate) :
+        _txnCreationDistribution(txnCreationRate), _blockCreationDistribution(blockCreationRate), _generator(time(NULL))
     {
         _id = id;
         _nodeType = nodeType;
         _money = 100;
-        _txnCreationTime = ceil(_txnCreationDistribution(_generator));
-        _blockCreationTime = ceil(_blockCreationDistribution(_generator));
+        _txnCreationTime = _txnCreationDistribution(_generator);
+        _blockCreationTime = _blockCreationDistribution(_generator);
     }
 
     Id id() const { return _id; }
@@ -34,9 +34,9 @@ public:
 
     vector<Id>& nbrs() { return _nbrs; }
 
-    time_t txnCreationTime() const { return _txnCreationTime; }
+    Time txnCreationTime() const { return _txnCreationTime; }
 
-    time_t blockCreationTime() const { return _blockCreationTime; } 
+    Time blockCreationTime() const { return _blockCreationTime; } 
 
     void add_neighbor(Id nbr) {
         _nbrs.push_back(nbr);
@@ -55,20 +55,20 @@ public:
         _heardTxns.insert(txn->id());
     }
 
-    void receive_block(Block *block, time_t arrivalTime) {
+    void receive_block(Block *block, Time arrivalTime) {
         _blockChain.add_block(*block, arrivalTime);
         _heardBlocks.insert(block->id());
         // update block creation time
-        _blockCreationTime = arrivalTime + ceil(_blockCreationDistribution(_generator));
+        _blockCreationTime = arrivalTime + _blockCreationDistribution(_generator);
         // remove transactions in the received block from unspent transactions list
     }
 
     Transaction* create_new_transaction(Id payee) {
         double percentage = (rand() % 50) / 100.0;
-        Coin amount = floor(_money * percentage);
+        Coin amount = _money * percentage;
         Transaction *txn = new Transaction(_id, payee, amount);
         receive_transaction(txn);
-        _txnCreationTime += ceil(_txnCreationDistribution(_generator));
+        _txnCreationTime += _txnCreationDistribution(_generator);
         return txn;
     }
 
@@ -91,8 +91,8 @@ private:
     vector<Transaction> _unspentTxns; // unspent transactions
     unordered_set<Id> _heardTxns; // transaction received so far (including those not in blockchain)
     unordered_set<Id> _heardBlocks; // blocks received so far (all blocks in blockchain)
-    time_t _txnCreationTime; // time when a new transaction should be created
-    time_t _blockCreationTime; // time when a new block should be created
+    Time _txnCreationTime; // time when a new transaction should be created
+    Time _blockCreationTime; // time when a new block should be created
     std::default_random_engine _generator;
     std::exponential_distribution<double> _txnCreationDistribution;
     std::exponential_distribution<double> _blockCreationDistribution;

@@ -23,13 +23,14 @@ public:
         // create n nodes of which z% are slow and rest are fast
         int t = floor(n*z);
         NodeType type;
-        double txnCreationMean, blockCreationMean;
+        double txnCreationRate, blockCreationRate;  // lambda values for interarrival exponential distribution
         srand(time(NULL));
         for (int id = 0; id < n; id++) {
             type = (id < t) ? SLOW : FAST;
-            txnCreationMean = 0.01 + (rand() % 1000) / 100000.0;
-            blockCreationMean = 0.001 + (rand() % 1000) / 1e7;
-            _nodes.push_back(new Node(id,type,txnCreationMean,blockCreationMean));
+            // use different values of below two parameters for different nodes
+            txnCreationRate = 0.01 + (rand() % 1000) / 100000.0;
+            blockCreationRate = 0.001 + (rand() % 1000) / 1e7;
+            _nodes.push_back(new Node(id,type,txnCreationRate,blockCreationRate));
         }
 
         // add random number of peers to each node
@@ -123,7 +124,7 @@ private:
         }
     }
 
-    time_t get_latency(Id i, Id j, int size_m) {
+    Time get_latency(Id i, Id j, int size_m) {
         std::exponential_distribution<double> expDistribution(0.12 / _bottleneckSpeeds[i][j]);
         double latency = _propDelays[i][j] + (size_m / _bottleneckSpeeds[i][j]) + expDistribution(_generator);
         return floor(latency);
@@ -143,7 +144,7 @@ private:
         Transaction *txn = creator->create_new_transaction(payee);
         int size_m = 0;
         for (Id nbr : creator->nbrs()) {
-            time_t otime = event->occurenceTime() + get_latency(creatorId, nbr, size_m);
+            Time otime = event->occurenceTime() + get_latency(creatorId, nbr, size_m);
             _eventsQueue.push(new Event(otime, RECEIVE_TRANSACTION, txn, NULL, creatorId, nbr, -1));
         }
 
@@ -160,7 +161,7 @@ private:
             Block *block = creator->create_new_block();
             int size_m = 100;
             for (Id nbr : creator->nbrs()) {
-                time_t otime = event->occurenceTime() + get_latency(creatorId, nbr, size_m);
+                Time otime = event->occurenceTime() + get_latency(creatorId, nbr, size_m);
                 _eventsQueue.push(new Event(otime, RECEIVE_BLOCK, NULL, block, creatorId, nbr, -1));
             }
 
@@ -188,7 +189,7 @@ private:
                 if (nbr == senderId) {
                     continue;
                 }
-                time_t otime = event->occurenceTime() + get_latency(receiverId, nbr, size_m);
+                Time otime = event->occurenceTime() + get_latency(receiverId, nbr, size_m);
                 _eventsQueue.push(new Event(otime, RECEIVE_TRANSACTION, txn, NULL, receiverId, nbr, -1));
             }
             cout << "Successful" << endl;
@@ -214,7 +215,7 @@ private:
                 if (nbr == senderId) {
                     continue;
                 }
-                time_t otime = event->occurenceTime() + get_latency(receiverId, nbr, size_m);
+                Time otime = event->occurenceTime() + get_latency(receiverId, nbr, size_m);
                 _eventsQueue.push(new Event(otime, RECEIVE_BLOCK, NULL, block, receiverId, nbr, -1));
             }
             cout << "Successful" << endl;
