@@ -1,0 +1,39 @@
+-----
+TITLE
+-----
+Discrete Event Simulator for P2P Cryptocurrency
+
+--------------------
+COMPILE INSTRUCTIONS
+--------------------
+Makefile is provided with the code. The program can be build using default make arguments.
+
+$ make
+	compiles the code and produces a ./a.out executable file in current directory
+
+$ make clean
+	- deletes the .dot and .ps files from ./graphs/ directory
+	- deletes ./a.out file from current directory
+	
+
+----------------------
+HOW TO RUN THE PROGRAM
+----------------------
+$ ./a.out <n> <z> <maxEvents>
+	- runs the program with following command line arguments:
+	  * n - number of peers in the network
+	  * z - percentage slow nodes, a number between 0 and 1
+	  * maxEvents - maximum number of combined events to be generated during simulation
+
+	example: $ ./a.out 10 0.3 5000
+
+$ python draw.py
+	- generates the tree for blockchain of each node in the network in ./graphs/ directory
+  
+
+-------
+AUTHORS
+-------
+* Harishchandra Patidar (2013CS10223)
+* Avinash Karthik (2013CS10217)
+* Kallepalli Goutham (2013CS10229)

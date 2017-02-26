@@ -1,8 +1,6 @@
 import os
-import sys
 
-folder = sys.argv[1]
-# folder = "graphs/"
+folder = "graphs/"
 
 for filename in os.listdir(folder):
 	if filename.endswith(".dot"):

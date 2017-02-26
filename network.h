@@ -21,16 +21,16 @@ public:
                                _bottleneckSpeeds(n, vector<double>(n)),
                                _generator(time(NULL))
     {
+        srand(time(NULL));
         // create n nodes of which z% are slow and rest are fast
         int t = floor(n*z);
         NodeType type;
+        int modulus = 1000;
         double txnCreationRate, blockCreationRate;  // lambda values for interarrival exponential distribution
-        srand(time(NULL));
         for (int id = 0; id < n; id++) {
             type = (id < t) ? SLOW : FAST;
-            // use different values of below two parameters for different nodes
-            txnCreationRate = 0.01 + (rand() % 1000) / 100000.0;
-            blockCreationRate = 0.01 + (rand() % 1000) / 1e5;
+            blockCreationRate = (500 + (rand() % 1500)) / 4000.0;
+            txnCreationRate = (500 + (rand() % 1500)) / 1000.0;
             _nodes.push_back(new Node(id,type,txnCreationRate,blockCreationRate));
         }
 
@@ -42,7 +42,7 @@ public:
                     _nodes[j]->add_neighbor(i);
                 }
             }
-            // if node has no peer
+            // if node has no peer, add a random peer
             if(_nodes[i]->nbrs().size() == 0) {
                 int j;
                 while ((j = rand() % n) == i);
@@ -66,7 +66,7 @@ public:
             Event *event = _eventsQueue.top();
             _eventsQueue.pop();
             eventCounter++;
-            // cout << "------------------ Event " << eventCounter << " at " << event->occurenceTime() << " ----------------------" << endl;
+            cout << "------------------ Event " << eventCounter << " at " << event->occurenceTime() << " ----------------------" << endl;
             switch(event->type()) {
                 case CREATE_TRANSACTION:
                     create_transaction(event);
@@ -87,7 +87,7 @@ public:
                 default:
                     assert(false); // should not come here
             }
-            // cout << endl;
+            cout << endl;
         }
         cout << "ctc = " << ctc << endl;
         cout << "cbc = " << cbc << endl;
@@ -103,8 +103,7 @@ public:
             for (Id nbr : node->nbrs()) {
                 cout << nbr << " ";
             }
-            cout << "| " << node->txnCreationTime() << " " << node->blockCreationTime();
-            cout << endl;
+            cout << "| (" << node->txnCreationTime() << "," << node->blockCreationTime() << ")" << endl;
         }
         cout << endl;
     }
@@ -144,7 +143,7 @@ private:
     }
 
     Time get_latency(Id i, Id j, int size_m) {
-        std::exponential_distribution<double> expDistribution(0.12 / _bottleneckSpeeds[i][j]);
+        std::exponential_distribution<double> expDistribution(_bottleneckSpeeds[i][j] / 0.12);
         double latency = _propDelays[i][j] + (size_m / _bottleneckSpeeds[i][j]) + expDistribution(_generator);
         return floor(latency);
     }
@@ -170,7 +169,7 @@ private:
         // add a new event which creates a new transaction by this node at updated txn creation time
         _eventsQueue.push(new Event(creator->txnCreationTime(), CREATE_TRANSACTION, NULL, NULL, -1, -1, creatorId));
 
-        // cout << "Create Transaction " << txn->id() << ": " << txn->payer() << "->" << txn->payee() << ", " << txn->amount() << endl;
+        cout << "Create Transaction " << txn->id() << ": " << txn->payer() << "->" << txn->payee() << ", " << txn->amount() << endl;
     }
 
     void create_block(Event *event) {
@@ -180,7 +179,6 @@ private:
             Block *block = creator->create_new_block();
             if (block == NULL) {
                 cout << "No unspent transactions, block could not be created" << endl;
-                return;
             } else {
                 int size_m = 100;
                 for (Id nbr : creator->nbrs()) {
@@ -192,7 +190,6 @@ private:
 
             // add a new event for creation of new block by this node at update block creation time
             _eventsQueue.push(new Event(creator->blockCreationTime(), CREATE_BLOCK, NULL, NULL, -1, -1, creatorId));
-
         }
     }
 
@@ -202,7 +199,7 @@ private:
         Transaction *txn = event->txn();
         Node *receiver = _nodes[receiverId];
         
-        // cout << "Receive Transaction " << txn->id() << ": " << receiverId << "<-" << senderId << " ";
+        cout << "Receive Transaction " << txn->id() << ": " << receiverId << "<-" << senderId << " ";
         
         // if the transaction is not already heard from any other connected peer
         if (!receiver->has_heard_txn(txn->id())) {
@@ -216,9 +213,9 @@ private:
                 Time otime = event->occurenceTime() + get_latency(receiverId, nbr, size_m);
                 _eventsQueue.push(new Event(otime, RECEIVE_TRANSACTION, txn, NULL, receiverId, nbr, -1));
             }
-            // cout << "Successful" << endl;
+            cout << "Successful" << endl;
         } else {
-            // cout << "Rejected" << endl;
+            cout << "Rejected" << endl;
         }
     }
 
